@@ -2,6 +2,6 @@
 Team Local tactics. Making in into Team Network Tactics
 
 Team members:
-Nikita Kondratjuks
-Ivar Fatland
+Nikita Kondratjuks,
+Ivar Fatland,
 Thomas Alme Matre

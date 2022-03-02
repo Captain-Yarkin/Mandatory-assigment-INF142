@@ -2,7 +2,7 @@
 import socket
 
 # This is the "public ip" that makes it possible to connect to the internet
-SERVER_PUBLIC_IP = "121.0.0.1"
+SERVER_PUBLIC_IP = socket.gethostbyname(socket.gethostname())
 # Out base bit header for sending and reciving data
 HEADER = 64
 # Chosen port

@@ -7,6 +7,9 @@ import globals
 sock = socket()
 sock.bind(globals.ADDRESS)
 
+selected_champ_player_1 = []
+selected_champ_player_2 = []
+
 def game(p1_socket: socket, p2_socket: socket):
     '''
     The actual game code.

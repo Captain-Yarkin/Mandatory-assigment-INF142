@@ -9,9 +9,6 @@ from json import dumps
 from rich import print
 from rich.table import Table
 
-from champlistloader import load_some_champs
-from core import Champion, Match, Shape, Team
-
 
 # sock = socket()
 # sock.bind(globals.ADDRESS)

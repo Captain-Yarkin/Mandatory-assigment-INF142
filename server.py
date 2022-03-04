@@ -7,6 +7,7 @@ from threading import Thread
 #PORT = 5050
 #ADDR = (SERVER, PORT)
 
+
 HEADER = 1024
 
 # Server address in string format

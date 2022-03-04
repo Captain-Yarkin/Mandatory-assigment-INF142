@@ -10,13 +10,13 @@ from threading import Thread
 HEADER = 1024
 
 # Server address in string format
-IP = ':'.join(map(str, ADDR))
+# IP = ':'.join(map(str, ADDR))
 sock = socket()
 sock.bind(("localhost", 5555))
 
 
 
-def game(p1_socket: socket.socket, p1_address, p2_socket: socket.socket, p2_address):
+def game(p1_socket: socket, p1_address, p2_socket: socket, p2_address):
     '''
     The actual game code.
     '''

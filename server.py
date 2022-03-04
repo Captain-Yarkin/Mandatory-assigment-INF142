@@ -1,5 +1,6 @@
 # This is where the server for the game is going to be
 import socket
+# Module that allows us to run multiple games at the same time on one server.
 import threading
 
 
@@ -18,9 +19,17 @@ server.bind(ADDR)
 
 
 def game(p1_socket: socket.socket, p1_address, p2_socket: socket.socket, p2_address):
+    '''
+    The actual game code.
+    '''
     pass
 
 def listenForConnections():
+    '''
+    Waits for clients to connect.
+    When two clients have connected, a new thread running game() will start.
+    Then the server will wait for two more connections and repeat.
+    '''
     
     server.listen()
     

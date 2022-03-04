@@ -2,12 +2,10 @@
 from socket import socket
 # Module that allows us to run multiple games at the same time on one server.
 from threading import Thread
+import globals
 
-HEADER = 1024
 sock = socket()
-sock.bind(("localhost", 5555))
-
-
+sock.bind(globals.ADDRESS)
 
 def game(p1_socket: socket, p2_socket: socket):
     '''
@@ -35,7 +33,7 @@ def listenForConnections():
 # this need more work on :)
 def read(conn):
   while True:
-    data = conn.recv(1024)
+    data = conn.recv(globals.HEADER)
     if data:
       sentence = data.decode()
       new_sentence = sentence.upper()

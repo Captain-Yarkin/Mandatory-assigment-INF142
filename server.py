@@ -3,21 +3,13 @@ from socket import socket
 # Module that allows us to run multiple games at the same time on one server.
 from threading import Thread
 
-#SERVER = socket.gethostbyname(socket.gethostname())
-#PORT = 5050
-#ADDR = (SERVER, PORT)
-
-
 HEADER = 1024
-
-# Server address in string format
-# IP = ':'.join(map(str, ADDR))
 sock = socket()
 sock.bind(("localhost", 5555))
 
 
 
-def game(p1_socket: socket, p1_address, p2_socket: socket, p2_address):
+def game(p1_socket: socket, p2_socket: socket):
     '''
     The actual game code.
     '''
@@ -33,15 +25,12 @@ def listenForConnections():
     sock.listen()
     
     while True:
-        print(f'Connect client to {IP = } to join game of TNT.')
         
-        p1_socket, p1_address = sock.accept()
-        print('Player 1 connected')
+        p1_socket = accept(sock)
         
-        p2_socket, p2_address = sock.accept()
-        print('Player 2 connected')
+        p2_socket = accept(sock)
         
-        Thread(target = game, args = (p1_socket, p1_address, p2_socket, p2_address)).start()
+        Thread(target = game, args = (p1_socket, p2_socket)).start()
 
 # this need more work on :)
 def read(conn):
@@ -56,11 +45,10 @@ def read(conn):
       conn.close()
       break
 
-def accept(sock):
-  while True:
-    conn, address = sock.accept()
-    print('accepted', conn, 'from', address)
-    Thread(target=read, args=(conn,)).start()
+def accept(sock: socket):
+    player_socket, address = sock.accept()
+    print('accepted', player_socket, 'from', address)
+    return player_socket
 
 
 if __name__ == '__main__':

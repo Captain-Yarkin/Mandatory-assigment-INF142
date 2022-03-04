@@ -1,10 +1,16 @@
+# This is where the server for the game is going to be
 import socket
 import threading
+
 
 SERVER = socket.gethostbyname(socket.gethostname())
 PORT = 5050
 ADDR = (SERVER, PORT)
 
+# Out base bit header for sending and reciving data
+HEADER = 64
+
+# Server address in string format
 IP = ':'.join(map(str, ADDR))
 
 server: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

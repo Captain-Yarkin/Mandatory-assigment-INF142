@@ -24,6 +24,7 @@ def listenForConnections():
     '''
     
     sock.listen()
+    print("Server is running...")
     
     while True:
         

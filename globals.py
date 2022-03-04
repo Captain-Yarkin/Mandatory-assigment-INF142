@@ -1,2 +1,6 @@
+from os import environ
+
+host = environ.get("HOST", "localhost")
+
 HEADER: int = 1024
-ADDRESS: tuple[str, int] = ('localhost', 5555)
+ADDRESS: tuple[str, int] = (host, 5555)

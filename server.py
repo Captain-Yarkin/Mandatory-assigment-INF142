@@ -3,6 +3,10 @@ from socket import socket
 # Module that allows us to run multiple games at the same time on one server.
 from threading import Thread
 
+#SERVER = socket.gethostbyname(socket.gethostname())
+#PORT = 5050
+#ADDR = (SERVER, PORT)
+
 HEADER = 1024
 
 # Server address in string format

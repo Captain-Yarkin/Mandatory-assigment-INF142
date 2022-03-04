@@ -2,7 +2,7 @@
 import socket
 
 # This is the "public ip" that makes it possible to connect to the internet
-SERVER_PUBLIC_IP = "129.177.197.63"
+SERVER_PUBLIC_IP = "localhost"
 # Out base bit header for sending and reciving data
 HEADER = 64
 # Chosen port

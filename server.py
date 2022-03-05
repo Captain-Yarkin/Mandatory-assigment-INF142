@@ -9,13 +9,8 @@ from json import dumps
 from rich import print
 from rich.table import Table
 
-
-# sock = socket()
-# sock.bind(globals.ADDRESS)
-
 host = environ.get("HOST", "localhost")
 sock = create_server((host, 5550))
-
 
 selected_champ_player_1 = []
 selected_champ_player_2 = []
@@ -29,9 +24,7 @@ temp_champs = {
 }
 
 def game(p1_socket: socket, p2_socket: socket):
-    '''
-    The actual game code.
-    '''
+
     print("[SERVER] Game Started")
 
     welcome_message = '''
@@ -42,22 +35,21 @@ def game(p1_socket: socket, p2_socket: socket):
     send_data(p1_socket, welcome_message)
     send_data(p2_socket, welcome_message)
 
-    
-    champions = dumps(temp_champs)
-    send_data(p1_socket, champions + "\n")
+    get_all_user_champions(p1_socket, p2_socket)
 
-    
-    # champion_table = available_champs(champions)
+def get_all_user_champions(player1, player2):
+    max_player_champion_count = 2
 
-    # send_data(p1_socket, champion_table)
-    send_data(p1_socket, "Player 1 select champion: ")
-    send_data(p2_socket, "Wait for Player 1 to select champion...")
+    for _ in range(max_player_champion_count):
+        select_champion(player1, player2, 1)
+        select_champion(player2, player1, 2)
 
-
-
-
+    pass
 
 def send_data(connection: socket, message):
+    
+    # Fill blank spaces to match headersize
+    message += " " * (globals.HEADER - len(message))
     connection.send(message.encode())
 
 def listenForConnections():
@@ -81,18 +73,48 @@ def listenForConnections():
         
         Thread(target = game, args = (p1_socket, p2_socket)).start()
 
-# this need more work on :)
 def read(conn):
   while True:
     data = conn.recv(globals.HEADER)
     if data:
       sentence = data.decode()
-      new_sentence = sentence.upper()
-      conn.send(new_sentence.encode())
-    else:
-      print('closing', conn)
-      conn.close()
-      break
+      print(f"[SERVER] {sentence}")
+      return sentence
+
+def select_champion(selecting_player, waiting_player, selecting_player_num):
+    champions = dumps(temp_champs)
+    send_data(selecting_player, champions + "\n")
+    send_data(selecting_player, globals.INPUT)
+    send_data(waiting_player, f"Wait for Player {selecting_player_num} to select champion...")
+
+    while True:
+        send_data(selecting_player, f"Player {selecting_player_num} select champion: ")
+        send_data(selecting_player, globals.INPUT)
+
+        userSelection = read(selecting_player)
+
+        # Validate selection
+        if validateChampion(userSelection):
+            if selecting_player_num == 1:
+                selected_champ_player_1.append(userSelection)
+            else:
+                selected_champ_player_2.append(userSelection)
+            print(f"[SERVER] (Selected champions) Player 1: {selected_champ_player_1}  Player 2: {selected_champ_player_2}")
+            send_data(waiting_player, f"Player {selecting_player_num} selected {userSelection}.")
+            break
+        else:
+            send_data(selecting_player, "Invalid selection. Please try again.")
+            continue
+        
+
+def validateChampion(selectedChamp):
+    # Check if champion exists in DB
+    if selectedChamp in temp_champs:
+        # Check if not previusly selected by any of the players
+        if selectedChamp not in selected_champ_player_1 and selectedChamp not in selected_champ_player_2:
+            return True
+
+    return False
 
 def accept(sock: socket):
     player_socket, address = sock.accept()

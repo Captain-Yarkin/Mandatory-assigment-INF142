@@ -15,6 +15,7 @@ sock = create_server((host, 5550))
 selected_champ_player_1 = []
 selected_champ_player_2 = []
 
+# TODO Replace this dict with DB
 temp_champs = {
   "Vian" : "",
   "Dr. Yi" : "",
@@ -36,15 +37,6 @@ def game(p1_socket: socket, p2_socket: socket):
     send_data(p2_socket, welcome_message)
 
     get_all_user_champions(p1_socket, p2_socket)
-
-def get_all_user_champions(player1, player2):
-    max_player_champion_count = 2
-
-    for _ in range(max_player_champion_count):
-        select_champion(player1, player2, 1)
-        select_champion(player2, player1, 2)
-
-    pass
 
 def send_data(connection: socket, message):
     
@@ -73,7 +65,11 @@ def listenForConnections():
         
         Thread(target = game, args = (p1_socket, p2_socket)).start()
 
-def read(conn):
+def _recv(conn):
+  '''
+  Handle receiving of data from clients.
+  Listens for messages, decodes them and returns the message.
+  '''
   while True:
     data = conn.recv(globals.HEADER)
     if data:
@@ -81,17 +77,27 @@ def read(conn):
       print(f"[SERVER] {sentence}")
       return sentence
 
+def get_all_user_champions(player1, player2):
+    '''
+    Collects the clients selection of champions.
+    '''
+    max_player_champion_count = 2
+
+    for _ in range(max_player_champion_count):
+        select_champion(player1, player2, 1)
+        select_champion(player2, player1, 2)
+
 def select_champion(selecting_player, waiting_player, selecting_player_num):
     champions = dumps(temp_champs)
     send_data(selecting_player, champions + "\n")
-    send_data(selecting_player, globals.INPUT)
     send_data(waiting_player, f"Wait for Player {selecting_player_num} to select champion...")
 
+    # Ask player for a champion until valid selection.
     while True:
         send_data(selecting_player, f"Player {selecting_player_num} select champion: ")
         send_data(selecting_player, globals.INPUT)
 
-        userSelection = read(selecting_player)
+        userSelection = _recv(selecting_player)
 
         # Validate selection
         if validateChampion(userSelection):

@@ -35,4 +35,3 @@ def start():
     _recv()
 
 start()
-sock.close()

@@ -5,8 +5,12 @@ from threading import Thread
 from os import environ
 import globals
 
-from rich import print
+from json import dumps
 
+from core import Match, Team
+
+from rich import print
+from rich.table import Table
 
 host = environ.get("HOST", "localhost")
 sock = create_server((host, 5550))
@@ -16,23 +20,53 @@ selected_champ_player_2 = []
 
 database = None
 
-def game(p1_socket: socket, p2_socket: socket):
+def game(player1: socket, player2: socket):
 
     print("[SERVER] Game Started")
 
     welcome_message = '''
           'Welcome to [bold yellow]Team Local Tactics[/bold yellow]!'
-          
           'Each player choose a champion each time.'
           '''
-    send_data(p1_socket, globals.PRINT, welcome_message)
-    send_data(p2_socket, globals.PRINT, welcome_message)
+    send_data(player1, globals.PRINT, welcome_message)
+    send_data(player2, globals.PRINT, welcome_message)
 
-    get_all_user_champions(p1_socket, p2_socket)
+    get_all_user_champions(player1, player2)
+    start_match(player1, player2)
+
+
+def start_match(player1, player2):
+
+    # Get champion list from DB and convert to correct format
+    champions = retrieve_champions()
+    champions = globals.format_champions(champions)
+
+    # Calculate match results
+    match = Match(
+        Team([champions[name] for name in selected_champ_player_1]),
+        Team([champions[name] for name in selected_champ_player_2])
+    )
+    match.play()
+
+    # Convert match results to string that can be sent to clients
+    match_rounds = []
+    for round in match.rounds:
+        print(f"{round}  ::: {type(round)}")
+        match_result = {}    
+        for key in round:
+            match_result[key] = f"{round.get(key).red},{round.get(key).blue}"
+        match_result = dumps(match_result)
+        match_rounds.append(match_result)
+    match_score = f"{match._red_score}:{match._blue_score}"
+
+    # Send results to clients
+    send_data(player1, globals.PRINT_RESULT, f"{match_rounds};{match_score}")
+    send_data(player2, globals.PRINT_RESULT, f"{match_rounds};{match_score}")
+
 
 def send_data(connection: socket, command, message):
     message = f"{command}|{message}"
-    # Fill blank spaces to match headersize
+    # Apply padding to fill rest of header
     message += "#" * (globals.HEADER - len(message))
     connection.send(message.encode())
 
@@ -44,6 +78,7 @@ def listenForConnections():
     When two clients have connected, a new thread running game() will start.
     Then the server will wait for two more connections and repeat.
     '''
+
     sock.listen()
     print("Server is running...")
     
@@ -80,11 +115,18 @@ def get_all_user_champions(player1, player2):
         select_champion(player1, player2, 1)
         select_champion(player2, player1, 2)
 
+def retrieve_champions():
+    '''
+    Request champions from database
+    '''
+    send_data(database, globals.DATA, "")
+    champions = _recv(database)
+    return champions
+
 def select_champion(selecting_player, waiting_player, selecting_player_num):
     
     # Receive champions from database
-    send_data(database, globals.DATA, "")
-    champions = _recv(database)
+    champions = retrieve_champions()
 
     send_data(selecting_player, globals.PRINT_CHAMPS, champions)
     send_data(waiting_player, globals.PRINT, f"Wait for Player {selecting_player_num} to select champion...")
@@ -95,13 +137,11 @@ def select_champion(selecting_player, waiting_player, selecting_player_num):
         selected_champion = _recv(selecting_player)
 
         # Update champion list (So we can update the list while we play)
-        send_data(database, globals.DATA, "")
-        champions = _recv(database)
-
-        champ_list = [x.split(",")[0] for x in champions.split("\n")]
+        champions = retrieve_champions()
+        all_champion_names = [x.split(",")[0] for x in champions.split("\n")]
 
         # Validate that champion exists
-        if selected_champion not in champ_list:
+        if selected_champion not in all_champion_names:
             send_data(selecting_player, globals.PRINT, f"The champion {selected_champion} is not available. Try again.")
 
         # Check if champion already is on the players team

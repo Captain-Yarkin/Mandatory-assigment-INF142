@@ -1,11 +1,11 @@
 from os import environ
-from champlistloader import load_some_champs
 
 host = environ.get("HOST", "localhost")
 
 INPUT = "INPUT"
 PRINT = "PRINT"
 PRINT_CHAMPS = "PRINT_CHAMPS"
+DATA = "DATA"
 
 HEADER: int = 512
 ADDRESS: tuple[str, int] = (host, 5555)

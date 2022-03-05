@@ -1,13 +1,9 @@
 # This is where the server for the game is going to be
-from ast import match_case
-from glob import glob
 from socket import socket, create_server
 # Module that allows us to run multiple games at the same time on one server.
 from threading import Thread
 from os import environ
-from champlistloader import load_some_champs
 import globals
-from json import dumps
 
 from rich import print
 
@@ -18,15 +14,7 @@ sock = create_server((host, 5550))
 selected_champ_player_1 = []
 selected_champ_player_2 = []
 
-# TODO Replace this dict with DB
-temp_champs = {
-    "Vian" : "",
-    "Dr. Yi" : "",
-    "Twist" : "",
-    "Guan" : "",
-    "Siva" : ""
-}
-
+database = None
 
 def game(p1_socket: socket, p2_socket: socket):
 
@@ -48,17 +36,19 @@ def send_data(connection: socket, command, message):
     message += "#" * (globals.HEADER - len(message))
     connection.send(message.encode())
 
+
 def listenForConnections():
+    global database
     '''
     Waits for clients to connect.
     When two clients have connected, a new thread running game() will start.
     Then the server will wait for two more connections and repeat.
     '''
-    
     sock.listen()
     print("Server is running...")
     
     while True:
+        database = accept(sock)
         
         p1_socket = accept(sock)
         send_data(p1_socket, globals.PRINT, "Waiting for player 2...")
@@ -78,7 +68,6 @@ def _recv(conn):
         data = conn.recv(globals.HEADER)
         if data:
             sentence = data.decode()
-            print(f"[SERVER] {sentence}")
             return sentence
 
 def get_all_user_champions(player1, player2):
@@ -92,8 +81,11 @@ def get_all_user_champions(player1, player2):
         select_champion(player2, player1, 2)
 
 def select_champion(selecting_player, waiting_player, selecting_player_num):
-    # champions = dumps(temp_champs)
-    champions = load_some_champs()
+    
+    # Receive champions from database
+    send_data(database, globals.DATA, "")
+    champions = _recv(database)
+
     send_data(selecting_player, globals.PRINT_CHAMPS, champions)
     send_data(waiting_player, globals.PRINT, f"Wait for Player {selecting_player_num} to select champion...")
 
@@ -102,8 +94,11 @@ def select_champion(selecting_player, waiting_player, selecting_player_num):
         send_data(selecting_player, globals.INPUT, f"Player {selecting_player_num} select champion: ")
         selected_champion = _recv(selecting_player)
 
+        # Update champion list (So we can update the list while we play)
+        send_data(database, globals.DATA, "")
+        champions = _recv(database)
 
-        champ_list = [x.split(",")[0] for x in load_some_champs().split("\n")]
+        champ_list = [x.split(",")[0] for x in champions.split("\n")]
 
         # Validate that champion exists
         if selected_champion not in champ_list:
@@ -129,8 +124,8 @@ def select_champion(selecting_player, waiting_player, selecting_player_num):
 
 
 def accept(sock: socket):
-    player_socket, address = sock.accept()
-    print('accepted', player_socket, 'from', address)
+    player_socket, _ = sock.accept()
+    print('accepted', player_socket)
     return player_socket
 
 

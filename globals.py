@@ -1,7 +1,4 @@
-from os import environ
 from core import Champion
-
-host = environ.get("HOST", "localhost")
 
 INPUT = "INPUT"
 PRINT = "PRINT"
@@ -10,7 +7,6 @@ PRINT_RESULT = "PRINT_RESULT"
 DATA = "DATA"
 
 HEADER: int = 512
-ADDRESS: tuple[str, int] = (host, 5555)
 
 def format_champions(champions):
     champions_dict = {}
@@ -25,9 +21,9 @@ def _parse_champ(champ_text: str) -> Champion:
 
 
 '''
-PROTOCOL
+PROTOCOL for sending messages from server
 
-COMMAND|"Message"
+"COMMAND"|"Message"
 
 example:
 INPUT|"Player 1, select champion: "

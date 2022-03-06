@@ -12,8 +12,8 @@ from rich import print
 host = environ.get("HOST", "localhost")
 sock = create_server((host, 5550))
 
-selected_champ_player_1 = []
-selected_champ_player_2 = []
+player1_champions = []
+player2_champions = []
 
 neutral_color = "white"
 player1_color = "red"
@@ -47,15 +47,14 @@ def start_match(player1, player2):
 
     # Calculate match results
     match = Match(
-        Team([champions[name] for name in selected_champ_player_1]),
-        Team([champions[name] for name in selected_champ_player_2])
+        Team([champions[name] for name in player1_champions]),
+        Team([champions[name] for name in player2_champions])
     )
     match.play()
 
     # Convert match results to string that can be sent to clients
     match_rounds = []
     for round in match.rounds:
-        print(f"{round}  ::: {type(round)}")
         match_result = {}    
         for key in round:
             match_result[key] = f"{round.get(key).red},{round.get(key).blue}"
@@ -155,26 +154,26 @@ def select_champion(selecting_player, waiting_player, selecting_player_num):
         if validate_champion(selected_champion, champion_list, selecting_player, selecting_player_num, selecting_color):
             # Add champion to a team
             if selecting_player_num == 1:
-                selected_champ_player_1.append(selected_champion)
+                player1_champions.append(selected_champion)
             else:
-                selected_champ_player_2.append(selected_champion)
+                player2_champions.append(selected_champion)
             send_data(waiting_player, globals.PRINT, f"[{selecting_color}]Player {selecting_player_num} selected {selected_champion}.")
-            print(f"[SERVER] (Selected champions) Player 1: {selected_champ_player_1}  Player 2: {selected_champ_player_2}")
+            print(f"[SERVER] (Selected champions) Player 1: {player1_champions}  Player 2: {player2_champions}")
             break
 
-def validate_champion(champion, champion_list, player, player_num ,color):
+def validate_champion(champion, champion_list, player, player_num, color):
     # Validate that champion exists
     if champion not in champion_list:
         send_data(player, globals.PRINT, f"[{color}]The champion {champion} is not available. Try again.")
         return False
 
     # Check if champion already is on the players team
-    elif (champion in selected_champ_player_1 and player_num == 1) or (champion in selected_champ_player_2 and player_num == 2):
+    elif (champion in player1_champions and player_num == 1) or (champion in player2_champions and player_num == 2):
         send_data(player, globals.PRINT, f"[{color}]{champion} is already in your team. Try again.")
         return False
         
     # Check if champion already is on enemy team
-    elif (champion in selected_champ_player_2 and player_num == 1) or (champion in selected_champ_player_1 and player_num == 2):
+    elif (champion in player2_champions and player_num == 1) or (champion in player1_champions and player_num == 2):
         send_data(player, globals.PRINT, f"[{color}]{champion} is in the enemy team. Try again.")
         return False
     return True

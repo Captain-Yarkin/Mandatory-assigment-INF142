@@ -8,9 +8,6 @@ import globals
 from json import loads
 from core import Champion
 
-# print('[red]Red victory!')
-# print("[red]Red victory!")
-
 server = environ.get("SERVER", "localhost")
 sock = create_connection((server, 5550))
 
@@ -18,8 +15,6 @@ def print_message(message):
     print(message)
 
 def send_input(prompt):
-    # message = input(prompt)
-
     message = Prompt.ask(prompt)
     sock.send(message.encode())
 
@@ -119,7 +114,5 @@ def _recv():
 
 def start():
     _recv()
-
-
 
 start()

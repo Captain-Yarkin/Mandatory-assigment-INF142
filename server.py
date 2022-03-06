@@ -136,7 +136,6 @@ def select_champion(selecting_player, waiting_player, selecting_player_num):
     else:
         selecting_color = player2_color
         waiting_color = player1_color
-
     
     # Receive champions from database
     champions = retrieve_champions()
@@ -151,22 +150,10 @@ def select_champion(selecting_player, waiting_player, selecting_player_num):
 
         # Update champion list (So we can update the list while we play)
         champions = retrieve_champions()
-        all_champion_names = [x.split(",")[0] for x in champions.split("\n")]
+        champion_list = [x.split(",")[0] for x in champions.split("\n")]
 
-        # Validate that champion exists
-        if selected_champion not in all_champion_names:
-            send_data(selecting_player, globals.PRINT, f"[{selecting_color}]The champion {selected_champion} is not available. Try again.")
-
-        # Check if champion already is on the players team
-        elif (selected_champion in selected_champ_player_1 and selecting_player_num == 1) or (selected_champion in selected_champ_player_2 and selecting_player_num == 2):
-            send_data(selecting_player, globals.PRINT, f"[{selecting_color}]{selected_champion} is already in your team. Try again.")
-        
-        # Check if champion already is on enemy team
-        elif (selected_champion in selected_champ_player_2 and selecting_player_num == 1) or (selected_champion in selected_champ_player_1 and selecting_player_num == 2):
-            send_data(selecting_player, globals.PRINT, f"[{selecting_color}]{selected_champion} is in the enemy team. Try again.")
-        
-        # Add champion to a team
-        else:
+        if validate_champion(selected_champion, champion_list, selecting_player, selecting_player_num, selecting_color):
+            # Add champion to a team
             if selecting_player_num == 1:
                 selected_champ_player_1.append(selected_champion)
             else:
@@ -174,6 +161,23 @@ def select_champion(selecting_player, waiting_player, selecting_player_num):
             send_data(waiting_player, globals.PRINT, f"[{selecting_color}]Player {selecting_player_num} selected {selected_champion}.")
             print(f"[SERVER] (Selected champions) Player 1: {selected_champ_player_1}  Player 2: {selected_champ_player_2}")
             break
+
+def validate_champion(champion, champion_list, player, player_num ,color):
+    # Validate that champion exists
+    if champion not in champion_list:
+        send_data(player, globals.PRINT, f"[{color}]The champion {champion} is not available. Try again.")
+        return False
+
+    # Check if champion already is on the players team
+    elif (champion in selected_champ_player_1 and player_num == 1) or (champion in selected_champ_player_2 and player_num == 2):
+        send_data(player, globals.PRINT, f"[{color}]{champion} is already in your team. Try again.")
+        return False
+        
+    # Check if champion already is on enemy team
+    elif (champion in selected_champ_player_2 and player_num == 1) or (champion in selected_champ_player_1 and player_num == 2):
+        send_data(player, globals.PRINT, f"[{color}]{champion} is in the enemy team. Try again.")
+        return False
+    return True
 
 
 def accept(sock: socket):

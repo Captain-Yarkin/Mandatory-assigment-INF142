@@ -8,26 +8,24 @@ import globals
 from json import loads
 from core import Champion
 
+# print('[red]Red victory!')
+# print("[red]Red victory!")
+
 server = environ.get("SERVER", "localhost")
 sock = create_connection((server, 5550))
 
 def print_message(message):
     print(message)
 
-def send_input(promt):
-    message = input(promt)
+def send_input(prompt):
+    # message = input(prompt)
+
+    message = Prompt.ask(prompt)
     sock.send(message.encode())
 
 def print_champions(champions):
    champions = globals.format_champions(champions)
    print_available_champs(champions)
-
-# def format_champions(champions):
-#     champions_dict = {}
-#     for line in champions.split("\n"):
-#         champ = globals._parse_champ(line)
-#         champions_dict[champ.name] = champ
-#     return champions_dict
 
 def print_available_champs(champions: dict[Champion]) -> None:
 
@@ -121,5 +119,7 @@ def _recv():
 
 def start():
     _recv()
+
+
 
 start()

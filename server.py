@@ -6,17 +6,18 @@ from os import environ
 import globals
 
 from json import dumps
-
 from core import Match, Team
-
 from rich import print
-from rich.table import Table
 
 host = environ.get("HOST", "localhost")
 sock = create_server((host, 5550))
 
 selected_champ_player_1 = []
 selected_champ_player_2 = []
+
+neutral_color = "white"
+player1_color = "red"
+player2_color = "blue"
 
 database = None
 
@@ -36,6 +37,9 @@ def game(player1: socket, player2: socket):
 
 
 def start_match(player1, player2):
+    '''
+    Calculate the match results and send the results to the clients
+    '''
 
     # Get champion list from DB and convert to correct format
     champions = retrieve_champions()
@@ -86,11 +90,11 @@ def listenForConnections():
         database = accept(sock)
         
         p1_socket = accept(sock)
-        send_data(p1_socket, globals.PRINT, "Waiting for player 2...")
+        send_data(p1_socket, globals.PRINT, f"[{neutral_color}]Waiting for player 2...")
         
         p2_socket = accept(sock)
-        send_data(p1_socket, globals.PRINT, "Player 2 found. Starting match.")
-        send_data(p2_socket, globals.PRINT, "Players found (2/2). Starting match.")
+        send_data(p1_socket, globals.PRINT, f"[{neutral_color}]Player 2 found. Starting match.")
+        send_data(p2_socket, globals.PRINT, f"[{neutral_color}]Players found (2/2). Starting match.")
         
         Thread(target = game, args = (p1_socket, p2_socket)).start()
 
@@ -124,16 +128,25 @@ def retrieve_champions():
     return champions
 
 def select_champion(selecting_player, waiting_player, selecting_player_num):
+
+    # Set colors of messages
+    if selecting_player_num == 1:
+        selecting_color = player1_color
+        waiting_color = player2_color
+    else:
+        selecting_color = player2_color
+        waiting_color = player1_color
+
     
     # Receive champions from database
     champions = retrieve_champions()
 
     send_data(selecting_player, globals.PRINT_CHAMPS, champions)
-    send_data(waiting_player, globals.PRINT, f"Wait for Player {selecting_player_num} to select champion...")
+    send_data(waiting_player, globals.PRINT, f"[{waiting_color}]Wait for Player {selecting_player_num} to select champion...")
 
     # Ask player for a champion until valid selection.
     while True:
-        send_data(selecting_player, globals.INPUT, f"Player {selecting_player_num} select champion: ")
+        send_data(selecting_player, globals.INPUT, f"[{selecting_color}]Player {selecting_player_num} select champion")
         selected_champion = _recv(selecting_player)
 
         # Update champion list (So we can update the list while we play)
@@ -142,15 +155,15 @@ def select_champion(selecting_player, waiting_player, selecting_player_num):
 
         # Validate that champion exists
         if selected_champion not in all_champion_names:
-            send_data(selecting_player, globals.PRINT, f"The champion {selected_champion} is not available. Try again.")
+            send_data(selecting_player, globals.PRINT, f"[{selecting_color}]The champion {selected_champion} is not available. Try again.")
 
         # Check if champion already is on the players team
         elif (selected_champion in selected_champ_player_1 and selecting_player_num == 1) or (selected_champion in selected_champ_player_2 and selecting_player_num == 2):
-            send_data(selecting_player, globals.PRINT, f"{selected_champion} is already in your team. Try again.")
+            send_data(selecting_player, globals.PRINT, f"[{selecting_color}]{selected_champion} is already in your team. Try again.")
         
         # Check if champion already is on enemy team
         elif (selected_champion in selected_champ_player_2 and selecting_player_num == 1) or (selected_champion in selected_champ_player_1 and selecting_player_num == 2):
-            send_data(selecting_player, globals.PRINT, f"{selected_champion} is in the enemy team. Try again.")
+            send_data(selecting_player, globals.PRINT, f"[{selecting_color}]{selected_champion} is in the enemy team. Try again.")
         
         # Add champion to a team
         else:
@@ -158,7 +171,7 @@ def select_champion(selecting_player, waiting_player, selecting_player_num):
                 selected_champ_player_1.append(selected_champion)
             else:
                 selected_champ_player_2.append(selected_champion)
-            send_data(waiting_player, globals.PRINT, f"Player {selecting_player_num} selected {selected_champion}.")
+            send_data(waiting_player, globals.PRINT, f"[{selecting_color}]Player {selecting_player_num} selected {selected_champion}.")
             print(f"[SERVER] (Selected champions) Player 1: {selected_champ_player_1}  Player 2: {selected_champ_player_2}")
             break
 

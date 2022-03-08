@@ -8,7 +8,7 @@ DATA = "DATA"
 
 HEADER: int = 512
 
-def format_champions(champions):
+def format_champions(champions) -> dict[str, Champion]:
     champions_dict = {}
     for line in champions.split("\n"):
         champ = _parse_champ(line)

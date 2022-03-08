@@ -11,9 +11,6 @@ from core import Champion
 server = environ.get("SERVER", "localhost")
 sock = create_connection((server, 5550))
 
-def print_message(message):
-    print(message)
-
 def send_input(prompt):
     message = Prompt.ask(prompt)
     sock.send(message.encode())
@@ -39,9 +36,6 @@ def print_available_champs(champions: dict[Champion]) -> None:
         available_champs.add_row(*champion.str_tuple)
 
     print(available_champs)
-
-def _input(promt):
-    send_input(promt)
 
 def print_match_result(message):
 
@@ -96,7 +90,7 @@ def print_match_summary(match_rounds, match_score) -> None:
         print('\nDraw :expressionless:')
 
 
-def _recv():
+def start():
     while True:
         data = sock.recv(globals.HEADER)
         command, message = data.decode().split("|")
@@ -104,15 +98,12 @@ def _recv():
 
         # If special keyword detected, start new thread to handle input
         if command == globals.INPUT:
-            Thread(target=_input(message)).start()
+            Thread(target=send_input(message)).start()
         elif command == globals.PRINT_CHAMPS:
             print_champions(message)
         elif command == globals.PRINT:
-            print_message(message)
+            print(message)
         elif command == globals.PRINT_RESULT:
             print_match_result(message)
-
-def start():
-    _recv()
 
 start()

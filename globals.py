@@ -8,6 +8,9 @@ DATA = "DATA"
 
 HEADER: int = 512
 
+SINGLE_PLAYER = 's'
+MULTI_PLAYER = 'm'
+
 def format_champions(champions) -> dict[str, Champion]:
     champions_dict = {}
     for line in champions.split("\n"):

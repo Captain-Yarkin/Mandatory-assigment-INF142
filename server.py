@@ -1,5 +1,5 @@
 # This is where the server for the game is going to be
-from socket import socket, create_server
+from socket import socket, create_server, create_connection
 # Module that allows us to run multiple games at the same time on one server.
 from threading import Thread
 from os import environ
@@ -18,8 +18,6 @@ player2_champions = []
 neutral_color = "white"
 player1_color = "red"
 player2_color = "blue"
-
-database = None
 
 def game(player1: socket, player2: socket):
 
@@ -75,7 +73,6 @@ def send_data(connection: socket, command, message):
 
 
 def listenForConnections():
-    global database
     '''
     Waits for clients to connect.
     When two clients have connected, a new thread running game() will start.
@@ -86,11 +83,11 @@ def listenForConnections():
     print("Server is running...")
     
     while True:
-        database = accept(sock)
-        
+        # Establish connection with player 1
         p1_socket = accept(sock)
         send_data(p1_socket, globals.PRINT, f"[{neutral_color}]Waiting for player 2...")
         
+        # Establish connection with player 2
         p2_socket = accept(sock)
         send_data(p1_socket, globals.PRINT, f"[{neutral_color}]Player 2 found. Starting match.")
         send_data(p2_socket, globals.PRINT, f"[{neutral_color}]Players found (2/2). Starting match.")
@@ -122,6 +119,10 @@ def retrieve_champions():
     '''
     Request champions from database
     '''
+    # Connect to the database with a socket
+    DB = environ.get("DATABASE", "localhost")
+    database = create_connection((DB, 5555))
+
     send_data(database, globals.DATA, "")
     champions = _recv(database)
     return champions

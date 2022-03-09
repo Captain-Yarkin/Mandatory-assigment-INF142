@@ -34,35 +34,59 @@ def main() -> NoReturn:
     
     '''
     Infinitely waits for clients to connect.
-    When two clients have connected, a new thread running game() will start, and the server can wait for two new clients to connect.
+    Clients will already have specified whether they want to play a single- or multiplayer game before connecting to the server.
+    If the player wants to play a multiplayer game, the socket is stored in a list while the server waits for another player to connect in multiplayer mode.
+    When two clients have connected, a new thread running game() will start, and the server can wait for more clients to connect.
+    If the player chooses single player mode, a thread running single_player_game() will start, and the server can wait for more clients.
     '''
 
     SOCK.listen()
     print("Server is running...")
 
+    multiplayer_sockets: list[socket] = []
+
     while True:
-        # Establish connection with player 1
-        player1 = Player(sock = accept(SOCK), num = 1, color = 'red')
-        
-        send_data(player1.sock, globals.PRINT,
+        player_socket = accept(SOCK)
+
+        # Get the the mode of play from client.
+        mode = player_socket.recv(1).decode()
+
+        if mode == globals.MULTI_PLAYER:
+            
+            multiplayer_sockets.append(player_socket)
+            num_players = len(multiplayer_sockets)
+
+            if num_players == 1:
+            
+                send_data(player_socket, globals.PRINT,
                   f"[{NEUTRAL_COLOR}]Waiting for player 2...")
+            
+            elif num_players == 2:
+            
+                for sock in multiplayer_sockets:
+                    send_data(sock, globals.PRINT,
+                      f"[{NEUTRAL_COLOR}]Players found (2/2). Starting match.")
+                
+                player1 = Player(multiplayer_sockets.pop(0), 1, 'red')
+                player2 = Player(multiplayer_sockets.pop(0), 2, 'blue')
+                Thread(target=game, args=(player1, player2)).start()
 
-        # Establish connection with player 2
-        player2 = Player(sock = accept(SOCK), num = 2, color = 'blue')
+        elif mode == globals.SINGLE_PLAYER:
+
+            Thread(target=single_player_game, args=(Player(player_socket, 1, 'red')))
         
-        send_data(player1.sock, globals.PRINT,
-                  f"[{NEUTRAL_COLOR}]Player 2 found. Starting match.")
-        send_data(player2.sock, globals.PRINT,
-                  f"[{NEUTRAL_COLOR}]Players found (2/2). Starting match.")
+        else:
 
-        # Start a new game in a separate thread, to continue listening for more connections.
-        Thread(target=game, args=(player1, player2)).start()
+            print('[SERVER] Connection refused. Invalid game mode.')
 
 def accept(sock: socket):
     player_socket, _ = sock.accept()
     print('accepted', player_socket)
     return player_socket
 
+def single_player_game(player: Player):
+    # TODO Single player game code.
+    pass
 
 def game(player1: Player, player2: Player):
 

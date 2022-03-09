@@ -10,7 +10,7 @@ from json import dumps
 from core import Match, Team
 from rich import print
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 SOCK = create_server((environ.get("HOST", "localhost"), 5550))
 NEUTRAL_COLOR = "white"
@@ -27,7 +27,7 @@ class Player:
     sock: socket
     num: int
     color: str
-    champs: list[str] = []
+    champs: list[str] = field(default_factory=list[str])
 
 
 def main() -> NoReturn:
@@ -101,7 +101,7 @@ def select_champion(selecting_player: Player, waiting_player: Player):
     while True:
         send_data(selecting_player.sock, globals.INPUT,
                   f"[{selecting_player.color}]Player {selecting_player.num} select champion")
-        selected_champion = recieve_data(selecting_player)
+        selected_champion = recieve_data(selecting_player.sock)
 
         # Update champion list (So we can update the list while we play)
         champions = retrieve_champions()

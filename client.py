@@ -8,8 +8,22 @@ import globals
 from json import loads
 from core import Champion
 
-server = environ.get("SERVER", "localhost")
-sock = create_connection((server, 5550))
+
+def constrained_input(prompt: str, valid_choices: tuple[str, ...]) -> str:
+
+    '''
+    Only allow certain inputs from user.
+    Keep asking until a valid input is given.
+    '''
+
+    while True:
+        
+        user_input = input(prompt + f' {valid_choices}: ')
+        
+        if user_input in valid_choices:
+            return user_input
+        
+        print(f'I do not understand {user_input}. Please try again.')
 
 def send_input(prompt):
     message = Prompt.ask(prompt)
@@ -90,7 +104,13 @@ def print_match_summary(match_rounds, match_score) -> None:
         print('\nDraw :expressionless:')
 
 
-def start():
+def main():
+
+    mode = constrained_input('Singleplayer, or multiplayer?', ('s', 'm'))
+    
+    global sock
+    sock = create_connection((environ.get("SERVER", "localhost"), 5550))
+
     while True:
         data = sock.recv(globals.HEADER)
         command, message = data.decode().split("|")
@@ -98,7 +118,7 @@ def start():
 
         # If special keyword detected, start new thread to handle input
         if command == globals.INPUT:
-            Thread(target=send_input(message)).start()
+            send_input(message)
         elif command == globals.PRINT_CHAMPS:
             print_champions(message)
         elif command == globals.PRINT:
@@ -106,4 +126,5 @@ def start():
         elif command == globals.PRINT_RESULT:
             print_match_result(message)
 
-start()
+if __name__ == '__main__':
+    main()

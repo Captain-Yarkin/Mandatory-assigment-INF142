@@ -1,3 +1,6 @@
+from __future__ import annotations
+import random
+
 # This is where the server for the game is going to be
 from socket import socket, create_server, create_connection
 # Module that allows us to run multiple games at the same time on one server.
@@ -14,9 +17,11 @@ from dataclasses import dataclass, field
 
 SOCK = create_server((environ.get("HOST", "localhost"), 5550))
 NEUTRAL_COLOR = "white"
+PLAYER1_COLOR = 'red'
+PLAYER2_COLOR = 'blue'
 
 
-@dataclass
+
 class Player:
     
     '''
@@ -24,11 +29,94 @@ class Player:
     This is to reduce the amount of arguments required in various functions.
     '''
     
-    sock: socket
-    num: int
-    color: str
-    champs: list[str] = field(default_factory=list[str])
+    def __init__(self, sock: socket, num: int):
+        self.sock = sock
+        self.num = num
+        self.color = PLAYER1_COLOR if num == 1 else PLAYER2_COLOR
+        self.champs: list[str] = []
+    
+    def print(self, message: str) -> None:
+        send_data(self.sock, globals.PRINT, message)
+    
+    def print_champs(self, champs: str) -> None:
+        send_data(self.sock, globals.PRINT_CHAMPS, champs)
+    
+    def print_result(self, result: str) -> None:
+        send_data(self.sock, globals.PRINT_RESULT, result)
+    
+    def select_champion(self, waiting_player: Player) -> None:
+        # Receive champions from database
+        champions = retrieve_champion_names_string()
 
+        self.print_champs(champions)
+        waiting_player.print(
+            f"[{waiting_player.color}]Wait for Player {self.num} to select champion..."
+        )
+
+        # Ask player for a champion until valid selection.
+        while True:
+            
+            send_data(self.sock, globals.INPUT, f"[{self.color}]Player {self.num} select champion")
+            selected_champion = recieve_data(self.sock)
+            
+            # Update champion list (So we can update the list while we play)
+            champion_list = retrieve_champion_names_list()
+
+            if validate_champion(selected_champion, champion_list, self, waiting_player):
+                # Add champion to a team
+                self.champs.append(selected_champion)
+
+                waiting_player.print(f"[{self.color}]Player {self.num} selected {selected_champion}.")
+
+                print(
+                    f"[SERVER] (Selected champions) Player {self.num}: {self.champs}  Player {waiting_player.num}: {waiting_player.champs}"
+                )
+                
+                break
+
+class Ai(Player):
+    def __init__(self):
+        super().__init__(None, 2)
+    
+    def print(self, message: str) -> None:
+        pass
+    
+    def print_champs(self, champs: str) -> None:
+        pass
+    
+    def print_result(self, result: str) -> None:
+        pass
+    
+    def select_champion(self, waiting_player: Player) -> None:
+        champion_list = retrieve_champion_names_list()
+        remaining_champions = [champ for champ in champion_list if champ not in (self.champs + waiting_player.champs)]
+        selected_champion = random.choice(remaining_champions)
+        self.champs.append(selected_champion)
+        
+        waiting_player.print(f"[{self.color}]Player {self.num} selected {selected_champion}.")
+
+def validate_champion(selected_champion: str, all_champions: list[str], selecting_player: Player, waiting_player: Player) -> bool:
+
+    '''
+    Returns true if the selected champion exists, and is not already part of the selecting or waiting players team.
+    If the champion is not available, the function returns false, and sends a message to the player to pick again.
+    '''
+
+    # Validate that champion exists
+    if selected_champion not in all_champions:
+        selecting_player.print(f"[{selecting_player.color}]The champion {selected_champion} is not available. Try again.")
+        return False
+
+    # Check if champion already is on the players team
+    elif selected_champion in selecting_player.champs:
+        selecting_player.print(f"[{selecting_player.color}]{selected_champion} is already in your team. Try again.")
+        return False
+
+    # Check if champion already is on enemy team
+    elif selected_champion in waiting_player.champs:
+        selecting_player.print(f"[{selecting_player.color}]{selected_champion} is in the enemy team. Try again.")
+        return False
+    return True
 
 def main() -> NoReturn:
     
@@ -67,13 +155,13 @@ def main() -> NoReturn:
                     send_data(sock, globals.PRINT,
                       f"[{NEUTRAL_COLOR}]Players found (2/2). Starting match.")
                 
-                player1 = Player(multiplayer_sockets.pop(0), 1, 'red')
-                player2 = Player(multiplayer_sockets.pop(0), 2, 'blue')
+                player1 = Player(multiplayer_sockets.pop(0), 1)
+                player2 = Player(multiplayer_sockets.pop(0), 2)
                 Thread(target=game, args=(player1, player2)).start()
 
         elif mode == globals.SINGLE_PLAYER:
 
-            Thread(target=single_player_game, args=(Player(player_socket, 1, 'red')))
+            Thread(target=game, args=(Player(player_socket, 1), Ai())).start()
         
         else:
 
@@ -84,10 +172,6 @@ def accept(sock: socket):
     print('accepted', player_socket)
     return player_socket
 
-def single_player_game(player: Player):
-    # TODO Single player game code.
-    pass
-
 def game(player1: Player, player2: Player):
 
     print("[SERVER] Game Started")
@@ -96,8 +180,8 @@ def game(player1: Player, player2: Player):
           'Welcome to [bold yellow]Team Local Tactics[/bold yellow]!'
           'Each player choose a champion each time.'
           '''
-    send_data(player1.sock, globals.PRINT, welcome_message)
-    send_data(player2.sock, globals.PRINT, welcome_message)
+    player1.print(welcome_message)
+    player2.print(welcome_message)
 
     get_all_user_champions(player1, player2)
     start_match(player1, player2)
@@ -109,63 +193,9 @@ def get_all_user_champions(player1: Player, player2: Player):
     max_player_champion_count = 2
 
     for _ in range(max_player_champion_count):
-        select_champion(player1, player2)
-        select_champion(player2, player1)
+        player1.select_champion(waiting_player = player2)
+        player2.select_champion(waiting_player = player1)
 
-def select_champion(selecting_player: Player, waiting_player: Player):
-
-    # Receive champions from database
-    champions = retrieve_champions()
-
-    send_data(selecting_player.sock, globals.PRINT_CHAMPS, champions)
-    send_data(waiting_player.sock, globals.PRINT,
-              f"[{waiting_player.color}]Wait for Player {selecting_player.num} to select champion...")
-
-    # Ask player for a champion until valid selection.
-    while True:
-        send_data(selecting_player.sock, globals.INPUT,
-                  f"[{selecting_player.color}]Player {selecting_player.num} select champion")
-        selected_champion = recieve_data(selecting_player.sock)
-
-        # Update champion list (So we can update the list while we play)
-        champions = retrieve_champions()
-        champion_list = [x.split(",")[0] for x in champions.split("\n")]
-
-        if validate_champion(selected_champion, champion_list, selecting_player, waiting_player):
-            # Add champion to a team
-            selecting_player.champs.append(selected_champion)
-
-            send_data(waiting_player.sock, globals.PRINT,
-                      f"[{selecting_player.color}]Player {selecting_player.num} selected {selected_champion}.")
-            print(
-                f"[SERVER] (Selected champions) Player {selecting_player.num}: {selecting_player.champs}  Player {waiting_player.num}: {waiting_player.champs}")
-            break
-
-def validate_champion(selected_champion: str, all_champions: list[str], selecting_player: Player, waiting_player: Player) -> bool:
-
-    '''
-    Returns true if the selected champion exists, and is not already part of the selecting or waiting players team.
-    If the champion is not available, the function returns false, and sends a message to the player to pick again.
-    '''
-
-    # Validate that champion exists
-    if selected_champion not in all_champions:
-        send_data(selecting_player.sock, globals.PRINT,
-                  f"[{selecting_player.color}]The champion {selected_champion} is not available. Try again.")
-        return False
-
-    # Check if champion already is on the players team
-    elif selected_champion in selecting_player.champs:
-        send_data(selecting_player.sock, globals.PRINT,
-                  f"[{selecting_player.color}]{selected_champion} is already in your team. Try again.")
-        return False
-
-    # Check if champion already is on enemy team
-    elif selected_champion in waiting_player.champs:
-        send_data(selecting_player.sock, globals.PRINT,
-                  f"[{selecting_player.color}]{selected_champion} is in the enemy team. Try again.")
-        return False
-    return True
 
 def start_match(player1: Player, player2: Player) -> None:
     '''
@@ -173,7 +203,7 @@ def start_match(player1: Player, player2: Player) -> None:
     '''
 
     # Get champion list from DB and convert to correct format
-    champions = retrieve_champions()
+    champions = retrieve_champion_names_string()
     champions = globals.format_champions(champions)
 
     # Calculate match results
@@ -194,8 +224,9 @@ def start_match(player1: Player, player2: Player) -> None:
     match_score = f"{match._red_score}:{match._blue_score}"
 
     # Send results to clients
-    send_data(player1.sock, globals.PRINT_RESULT, f"{match_rounds};{match_score}")
-    send_data(player2.sock, globals.PRINT_RESULT, f"{match_rounds};{match_score}")
+    result_message = f"{match_rounds};{match_score}"
+    player1.print_result(result_message)
+    player2.print_result(result_message)
 
 
 def send_data(connection: socket, command: str, message: str) -> None:
@@ -217,7 +248,7 @@ def recieve_data(conn: socket) -> str:
             return sentence
 
 
-def retrieve_champions():
+def retrieve_champion_names_string() -> str:
     '''
     Request champions from database
     '''
@@ -229,6 +260,8 @@ def retrieve_champions():
     champions = recieve_data(database)
     return champions
 
+def retrieve_champion_names_list() -> list[str]:
+    return [x.split(",")[0] for x in retrieve_champion_names_string().split("\n")]
 
 if __name__ == '__main__':
     main()

@@ -106,10 +106,11 @@ def print_match_summary(match_rounds, match_score) -> None:
 
 def main():
 
-    mode = constrained_input('Singleplayer, or multiplayer?', ('s', 'm'))
+    mode = constrained_input('Singleplayer, or multiplayer?', (globals.SINGLE_PLAYER, globals.MULTI_PLAYER))
     
     global sock
     sock = create_connection((environ.get("SERVER", "localhost"), 5550))
+    sock.send(mode.encode())
 
     while True:
         data = sock.recv(globals.HEADER)
